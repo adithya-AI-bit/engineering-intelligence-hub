@@ -1,0 +1,15 @@
+{"question": "How are markdown files split into chunks?", "expected_source": "hub/chunking.py"}
+{"question": "What happens when a python file has a syntax error during chunking?", "expected_source": "hub/chunking.py"}
+{"question": "How is cosine similarity search implemented?", "expected_source": "hub/index.py"}
+{"question": "How is the index saved to and loaded from disk?", "expected_source": "hub/index.py"}
+{"question": "Which model is used for embeddings?", "expected_source": "hub/config.py"}
+{"question": "How are embedding requests batched?", "expected_source": "hub/embed.py"}
+{"question": "Which directories are skipped when collecting files?", "expected_source": "ingest.py"}
+{"question": "How does the system stop prompt injection from indexed content?", "expected_source": "hub/answer.py"}
+{"question": "How are citation markers parsed out of an answer?", "expected_source": "hub/answer.py"}
+{"question": "How is groundedness scored?", "expected_source": "evaluation/metrics.py"}
+{"question": "How is recall at k calculated?", "expected_source": "evaluation/metrics.py"}
+{"question": "How are retrieval misses reported?", "expected_source": "evaluation/run_eval.py"}
+{"question": "What does the ask endpoint return?", "expected_source": "api/main.py"}
+{"question": "How is the index loaded when the server starts?", "expected_source": "api/main.py"}
+{"question": "How does the offline embedder avoid randomised hashing?", "expected_source": "hub/embed_local.py"}

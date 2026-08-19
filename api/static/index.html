@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engineering Intelligence Hub</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;padding:32px 16px}
+.wrap{max-width:820px;margin:0 auto}
+h1{font-size:1.5rem;font-weight:600;color:#e6edf3}
+.subtitle{font-size:.82rem;color:#6e7681;margin:4px 0 22px}
+.card{background:#161b22;border:1.5px solid #21262d;border-radius:12px;padding:22px;margin-bottom:16px}
+.row{display:flex;gap:8px}
+input{flex:1;padding:10px 13px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#c9d1d9;font-size:.9rem}
+input:focus{outline:none;border-color:#58a6ff}
+button{padding:10px 20px;border-radius:8px;border:none;background:#238636;color:#fff;font-weight:600;font-size:.86rem;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.note{font-size:.78rem;color:#6e7681;margin-top:12px}
+.error{background:#3a1a1a;color:#f85149;border-radius:8px;padding:12px 15px;font-size:.85rem;margin-top:14px}
+#answer{font-size:.92rem;line-height:1.65;white-space:pre-wrap}
+.label{font-size:.74rem;text-transform:uppercase;letter-spacing:.5px;color:#6e7681;margin-bottom:10px}
+.src{display:flex;justify-content:space-between;gap:12px;padding:9px 13px;background:#0d1117;border-radius:8px;margin-bottom:6px;border-left:3px solid #58a6ff}
+.src-path{font-family:ui-monospace,Menlo,monospace;font-size:.8rem;color:#e6edf3}
+.src-ctx{font-size:.76rem;color:#8b949e;margin-top:2px}
+.src-score{font-size:.76rem;color:#6e7681;white-space:nowrap}
+.src.unused{border-left-color:#30363d;opacity:.55}
+#results{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Engineering Intelligence Hub</h1>
+  <p class="subtitle">Ask about the indexed codebase. Every claim cites the file and lines it came from.</p>
+
+  <div class="card">
+    <div class="row">
+      <input id="q" placeholder="How does the retry policy work?" autocomplete="off"/>
+      <button id="askBtn">Ask</button>
+    </div>
+    <div class="note" id="status"></div>
+    <div class="error" id="error" style="display:none"></div>
+  </div>
+
+  <div id="results">
+    <div class="card">
+      <div class="label">Answer</div>
+      <div id="answer"></div>
+    </div>
+    <div class="card">
+      <div class="label" id="srcLabel">Sources</div>
+      <div id="sources"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const qEl = document.getElementById('q');
+const btn = document.getElementById('askBtn');
+const errEl = document.getElementById('error');
+const statusEl = document.getElementById('status');
+
+fetch('/health').then(r => r.json()).then(d => {
+  statusEl.textContent = d.chunks
+    ? `${d.chunks} chunks indexed.`
+    : 'No index loaded. Run ingest.py first.';
+}).catch(() => { statusEl.textContent = ''; });
+
+async function ask() {
+  const question = qEl.value.trim();
+  if (!question) return;
+
+  btn.disabled = true;
+  errEl.style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  statusEl.textContent = 'Searching and answering...';
+
+  try {
+    const res = await fetch('/ask', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question})
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Something went wrong.';
+      errEl.style.display = 'block';
+      statusEl.textContent = '';
+      return;
+    }
+    render(data);
+    statusEl.textContent = '';
+  } catch {
+    errEl.textContent = 'Could not reach the server.';
+    errEl.style.display = 'block';
+    statusEl.textContent = '';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function render(data) {
+  document.getElementById('answer').textContent = data.answer;
+
+  const used = new Set(data.used_citations || []);
+  document.getElementById('srcLabel').textContent =
+    `Sources (${used.size} of ${data.sources.length} cited)`;
+
+  const container = document.getElementById('sources');
+  container.replaceChildren();
+
+  data.sources.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = used.has(i + 1) ? 'src' : 'src unused';
+
+    const left = document.createElement('div');
+    const path = document.createElement('div');
+    path.className = 'src-path';
+    path.textContent = `[${i + 1}] ${s.source}:${s.start_line}-${s.end_line}`;
+    const ctx = document.createElement('div');
+    ctx.className = 'src-ctx';
+    ctx.textContent = s.context;
+    left.append(path, ctx);
+
+    const score = document.createElement('div');
+    score.className = 'src-score';
+    score.textContent = s.score.toFixed(3);
+
+    row.append(left, score);
+    container.append(row);
+  });
+
+  document.getElementById('results').style.display = 'block';
+}
+
+btn.addEventListener('click', ask);
+qEl.addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+</script>
+</body>
+</html>
